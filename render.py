@@ -940,16 +940,24 @@ def cmd_path(args: argparse.Namespace) -> int:
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(prog="nixos-status", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--state", default=os.environ.get("NIXOS_STATUS_STATE", DEFAULT_STATE),
-                    help=f"state directory (default {DEFAULT_STATE}, or $NIXOS_STATUS_STATE)")
+    state_help = f"state directory (default {DEFAULT_STATE}, or $NIXOS_STATUS_STATE)"
+    ap.add_argument("--state", default=os.environ.get("NIXOS_STATUS_STATE", DEFAULT_STATE), help=state_help)
     sub = ap.add_subparsers(dest="cmd")
-    g = sub.add_parser("generate", help="record the activated system and render the page (root)")
+
+    def add(name: str, help_: str) -> argparse.ArgumentParser:
+        p = sub.add_parser(name, help=help_)
+        # Accepted after the subcommand too; SUPPRESS keeps the top-level
+        # value when it is not given here.
+        p.add_argument("--state", default=argparse.SUPPRESS, help=state_help)
+        return p
+
+    g = add("generate", "record the activated system and render the page (root)")
     g.add_argument("--manifest", required=True, help="evaluation-time manifest JSON")
     g.add_argument("--system-config", required=True, help="the activated system toplevel")
     g.add_argument("--quiet", action="store_true")
-    sub.add_parser("text", help="print a plain-text summary (default)")
-    sub.add_parser("open", help="open the page in the default browser")
-    sub.add_parser("path", help="print the path of the page")
+    add("text", "print a plain-text summary (default)")
+    add("open", "open the page in the default browser")
+    add("path", "print the path of the page")
     args = ap.parse_args(argv)
     return {"generate": cmd_generate, "text": cmd_text, "open": cmd_open, "path": cmd_path,
             None: cmd_text}[args.cmd](args)
