@@ -524,6 +524,8 @@ code{background:var(--code);padding:0 .25em;border-radius:3px}
 table{border-collapse:collapse;width:100%}
 th,td{text-align:left;vertical-align:top;padding:.25rem .5rem;border-bottom:1px solid var(--line)}
 th{font-weight:600;color:var(--muted);white-space:nowrap}
+th.sort{cursor:pointer;user-select:none}th.sort:hover{color:var(--fg)}
+th.sort[data-dir=asc]::after{content:" ▲";font-size:.7em}th.sort[data-dir=desc]::after{content:" ▼";font-size:.7em}
 tbody tr:nth-child(even){background:var(--row)}
 td.num,th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 td.v{white-space:nowrap}
@@ -559,6 +561,15 @@ function bind(id,cls){var el=document.getElementById(id);function apply(){body.c
 bind('show-prev','show-prev');bind('only-changed','only-changed');
 var rows=document.querySelectorAll('tr.pkg'),q=document.getElementById('q');
 q.addEventListener('input',function(){var s=q.value.trim().toLowerCase();for(var i=0;i<rows.length;i++){rows[i].classList.toggle('nomatch',s!==''&&rows[i].dataset.k.indexOf(s)<0)}});
+var ths=document.querySelectorAll('th.sort');
+for(var j=0;j<ths.length;j++)ths[j].addEventListener('click',function(){
+var th=this,table=th.closest('table'),tbody=table.tBodies[0],key=th.dataset.sort,num=key==='size';
+var dir=th.dataset.dir?(th.dataset.dir==='asc'?'desc':'asc'):(num?'desc':'asc');
+var all=table.querySelectorAll('th.sort');for(var i=0;i<all.length;i++)delete all[i].dataset.dir;th.dataset.dir=dir;
+var list=Array.prototype.slice.call(tbody.rows);
+list.sort(function(a,b){var x=a.dataset[key],y=b.dataset[key],c=num?(+x)-(+y):(x<y?-1:x>y?1:0);
+if(c===0&&key!=='name'){x=a.dataset.name;y=b.dataset.name;c=x<y?-1:x>y?1:0;return c}return dir==='desc'?-c:c});
+for(var i=0;i<list.length;i++)tbody.appendChild(list[i])});
 })();
 """
 
@@ -726,9 +737,13 @@ def render_html(records: list[dict]) -> str:
                 parts.append(f"{c['removed']} removed")
             summary += " · " + (" · ".join(parts) if parts else "unchanged")
         w(f"<h2 id=\"{esc(g['id'])}\">{esc(g['title'])} <span class=\"muted small\">{esc(summary)}</span></h2>\n")
-        w("<table><thead><tr><th>Package</th><th>Version</th><th>Source</th><th class=\"num\">Closure</th><th>Description</th></tr></thead><tbody>")
+        w("<table><thead><tr><th class=\"sort\" data-sort=\"name\" title=\"Sort\">Package</th><th>Version</th>"
+          "<th class=\"sort\" data-sort=\"src\" title=\"Sort\">Source</th>"
+          "<th class=\"num sort\" data-sort=\"size\" title=\"Sort\">Closure</th><th>Description</th></tr></thead><tbody>")
         for r in g["rows"]:
             key = esc(f"{r['pname']} {r['description']} {r['source']}".lower())
+            attrs = (f'data-name="{esc(r["pname"].lower())}" data-src="{esc(r["source"].lower())}" '
+                     f'data-size="{r["size"] if r["size"] is not None else -1}"')
             tip = esc(r["position"]) if r["position"] else ""
             name = esc(r["pname"])
             if r.get("homepage"):
@@ -736,7 +751,7 @@ def render_html(records: list[dict]) -> str:
             desc = r["description"]
             if len(desc) > 110:
                 desc = desc[:107].rstrip() + "…"
-            w(f'<tr class="pkg {r["status"]}" data-k="{key}">'
+            w(f'<tr class="pkg {r["status"]}" data-k="{key}" {attrs}>'
               f'<td title="{tip}">{name}</td><td class="v">{version_cell(r)}</td>'
               f'<td class="small">{esc(r["source"])}</td><td class="num">{esc(human(r["size"]))}</td>'
               f'<td class="small">{esc(desc)}</td></tr>')

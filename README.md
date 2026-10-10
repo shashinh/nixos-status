@@ -28,6 +28,7 @@ What the page shows:
   `nixpkgs-stable`, another input, or the configuration flake itself), its
   closure size, and its description. Toggles show the previous version
   (`1.2.3 → 1.3.0`), restrict the list to what changed, or filter by name.
+  The package, source and closure columns sort on click.
 - **Changelog**: one entry per recorded switch (ten by default) listing the
   packages added, removed and upgraded, the inputs that moved, and the size
   delta.
@@ -142,7 +143,8 @@ system with an impermanent root, persist `/var/lib/nixos-status`.
    writes the record and renders the page. It runs as root and finishes well
    under a second; a failure prints a warning and never aborts activation.
 3. **The page** is plain HTML with inline CSS and a few lines of inline
-   JavaScript for the toggles, the filter box and the theme switch. The
+   JavaScript for the toggles, the filter box, column sorting and the theme
+   switch. The
    previous versions are already in the markup; the toggles only change what
    is displayed.
 
